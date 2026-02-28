@@ -10,7 +10,7 @@ st.write("Title: Age Classification using ViT")
 age_classifier = pipeline("image-classification",
                           model="abhilash88/age-gender-prediction")
 
-image_name = "middleagedMan.jpg"
+result = predict_age_gender("middleagedMan.jpg")
 image_name = Image.open(image_name).convert("RGB")
 
 # Classify age
@@ -21,3 +21,6 @@ age_predictions = sorted(age_predictions, key=lambda x: x['score'], reverse=True
 # Display results
 st.write("Predicted Age Range:")
 st.write(f"Age range: {age_predictions[0]['label']}")
+
+st.write(f"Age: {result['age']}, Gender: {result['gender']}")
+
