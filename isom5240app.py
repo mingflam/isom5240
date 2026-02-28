@@ -1,6 +1,7 @@
 from transformers import pipeline
 from PIL import Image
 import streamlit as st
+from model import predict_age_gender
 
 # Streamlit UI
 print("Title: Age Classification using ViT")
@@ -12,6 +13,7 @@ age_classifier = pipeline("image-classification",
 
 image_name = "middleagedMan.jpg"
 image_name = Image.open(image_name).convert("RGB")
+result = predict_age_gender(image_name)
 
 # Classify age
 age_predictions = age_classifier(image_name)
