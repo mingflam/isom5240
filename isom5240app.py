@@ -4,13 +4,13 @@ from PIL import Image
 import streamlit as st
 
 # function part
-def ageClassifier(imgFliename):
+def ageClassifier(imgFlieName, modelName):
     # Load the age classification pipeline
     # The code below should be placed in the main part of the program
     age_classifier = pipeline("image-classification",
-                              model="dima806/fairface_age_image_detection")
+                              model=modelName)
     
-    image_name = imgFliename
+    image_name = imgFlieName
     image_name = Image.open(image_name).convert("RGB")
     
     # Classify age
@@ -23,7 +23,7 @@ def main():
     # Streamlit UI
     st.header("Title: Age Classification using ViT")
 
-    age_predictions = ageClassifier("middleagedMan.jpg")
+    age_predictions = ageClassifier("middleagedMan.jpg","dima806/fairface_age_image_detection")
     
     ##st.write(age_predictions)
     age_predictions = sorted(age_predictions, key=lambda x: x['score'], reverse=True)
