@@ -1,6 +1,8 @@
 import streamlit as st
 from transformers import pipeline
 from PIL import Image
+from model import predict_age_gender
+
 
 # Streamlit UI
 st.write("Title: Age Classification using ViT")
