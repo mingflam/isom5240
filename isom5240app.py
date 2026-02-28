@@ -13,7 +13,7 @@ age_classifier = pipeline("image-classification",
 
 image_name = "middleagedMan.jpg"
 image_name = Image.open(image_name).convert("RGB")
-result = predict_age_gender(image_name)
+result = predict_age_gender("image_name")
 
 # Classify age
 age_predictions = age_classifier(image_name)
