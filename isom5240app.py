@@ -1,23 +1,34 @@
+# import part
 from transformers import pipeline
 from PIL import Image
 import streamlit as st
 
-# Streamlit UI
-print("Title: Age Classification using ViT")
+# function part
+def main():
+    # Streamlit UI
+    print("Title: Age Classification using ViT")
+    
+    # Load the age classification pipeline
+    # The code below should be placed in the main part of the program
+    age_classifier = pipeline("image-classification",
+                              model="dima806/fairface_age_image_detection")
+    
+    image_name = "middleagedMan.jpg"
+    image_name = Image.open(image_name).convert("RGB")
+    
+    # Classify age
+    age_predictions = age_classifier(image_name)
+    st.write(age_predictions)
+    age_predictions = sorted(age_predictions, key=lambda x: x['score'], reverse=True)
+    
+    # Display results
+    st.write("Predicted Age Range:")
+    st.write(f"Age range: {age_predictions[0]['label']}")
 
-# Load the age classification pipeline
-# The code below should be placed in the main part of the program
-age_classifier = pipeline("image-classification",
-                          model="dima806/fairface_age_image_detection")
+# main part
+if __name__ == "__main__":
+    main()
 
-image_name = "middleagedMan.jpg"
-image_name = Image.open(image_name).convert("RGB")
 
-# Classify age
-age_predictions = age_classifier(image_name)
-st.write(age_predictions)
-age_predictions = sorted(age_predictions, key=lambda x: x['score'], reverse=True)
 
-# Display results
-st.write("Predicted Age Range:")
-st.write(f"Age range: {age_predictions[0]['label']}")
+
