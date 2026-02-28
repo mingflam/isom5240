@@ -1,28 +1,22 @@
-import streamlit as st
 from transformers import pipeline
 from PIL import Image
-from model import predict_age_gender
-
 
 # Streamlit UI
-st.write("Title: Age Classification using ViT")
+print("Title: Age Classification using ViT")
 
 # Load the age classification pipeline
 # The code below should be placed in the main part of the program
 age_classifier = pipeline("image-classification",
-                          model="abhilash88/age-gender-prediction")
+                          model="nateraw/vit-age-classifier")
 
-result = predict_age_gender("middleagedMan.jpg")
+image_name = "middleagedMan.jpg"
 image_name = Image.open(image_name).convert("RGB")
 
 # Classify age
 age_predictions = age_classifier(image_name)
-st.write(age_predictions)
+print(age_predictions)
 age_predictions = sorted(age_predictions, key=lambda x: x['score'], reverse=True)
 
 # Display results
-st.write("Predicted Age Range:")
-st.write(f"Age range: {age_predictions[0]['label']}")
-
-st.write(f"Age: {result['age']}, Gender: {result['gender']}")
-
+print("Predicted Age Range:")
+print(f"Age range: {age_predictions[0]['label']}")
