@@ -23,7 +23,8 @@ def main():
     # Streamlit UI
     st.header("Title: Age Classification using ViT")
 
-    age_predictions = ageClassifier("middleagedMan.jpg","dima806/fairface_age_image_detection")
+    #age_predictions = ageClassifier("middleagedMan.jpg","dima806/fairface_age_image_detection")
+    age_predictions = ageClassifier("middleagedMan.jpg","prithivMLmods/open-age-detection")
     
     ##st.write(age_predictions)
     age_predictions = sorted(age_predictions, key=lambda x: x['score'], reverse=True)
