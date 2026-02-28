@@ -4,10 +4,7 @@ from PIL import Image
 import streamlit as st
 
 # function part
-def main():
-    # Streamlit UI
-    print("Title: Age Classification using ViT")
-    
+def ageClassifier():
     # Load the age classification pipeline
     # The code below should be placed in the main part of the program
     age_classifier = pipeline("image-classification",
@@ -18,6 +15,16 @@ def main():
     
     # Classify age
     age_predictions = age_classifier(image_name)
+
+    return age_predictions
+
+def main():
+    
+    # Streamlit UI
+    st.header("Title: Age Classification using ViT")
+
+    age_predictions = ageClassifier():
+    
     st.write(age_predictions)
     age_predictions = sorted(age_predictions, key=lambda x: x['score'], reverse=True)
     
