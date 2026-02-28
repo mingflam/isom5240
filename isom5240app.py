@@ -18,6 +18,14 @@ def ageClassifier(imgFlieName, modelName):
 
     return age_predictions
 
+def output_msg(age_predictions):
+    ##st.write(age_predictions)
+    age_predictions = sorted(age_predictions, key=lambda x: x['score'], reverse=True)
+    
+    # Display results
+    st.write("Predicted Age Range:")
+    st.write(f"Age range: {age_predictions[0]['label']}")
+
 def main():
     
     # Streamlit UI
@@ -26,12 +34,9 @@ def main():
     age_predictions = ageClassifier("middleagedMan.jpg","dima806/fairface_age_image_detection")
     #age_predictions = ageClassifier("middleagedMan.jpg","prithivMLmods/open-age-detection")
     
-    ##st.write(age_predictions)
-    age_predictions = sorted(age_predictions, key=lambda x: x['score'], reverse=True)
-    
-    # Display results
-    st.write("Predicted Age Range:")
-    st.write(f"Age range: {age_predictions[0]['label']}")
+    output_msg(age_predictions)
+
+
 
 # main part
 if __name__ == "__main__":
