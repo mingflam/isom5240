@@ -1,22 +1,24 @@
 import streamlit as st
-from transformers import pipeline
+from PIL import Image
+import time
 
-# Load the text classification model pipeline
-classifier = pipeline("text-classification",model='isom5240ust/bert-base-uncased-emotion')
+# App title
+st.title("Streamlit Demo on Hugging Face")
 
-# Streamlit application title
-st.title("Text Classification for you")
-st.write("Classification for 6 emotions: sadness, joy, love, anger, fear, surprise")
+# Write some text
+st.write("Welcome to a demo app showcasing basic Streamlit components!")
 
-# Text input for user to enter the text to classify
-text = st.text_area("Enter the text to classify", "")
+# File uploader for image and audio
+uploaded_image = st.file_uploader("Upload an image",
+                                  type=["jpg", "jpeg", "png"])
 
-# Perform text classification when the user clicks the "Classify" button
-if st.button("Classify"):
-    # Perform text classification on the input text
-    result = classifier(text)[0]
+# Display image with spinner
+if uploaded_image is not None:
+    with st.spinner("Loading image..."):
+        time.sleep(1)  # Simulate a delay
+        image = Image.open(uploaded_image)
+        st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # Display the classification result
-    st.write("Text:", text)
-    st.write("Label:", result['score'])
-    st.write("Score:", result['label'])
+# Button interaction
+if st.button("Click Me"):
+    st.write("🎉 You clicked the button!")
