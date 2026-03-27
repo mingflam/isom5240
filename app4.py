@@ -25,7 +25,7 @@ except Exception:
 # Default models
 # =========================
 P1_MODEL_ID = "mingflam/final_sentiment_model_v3"
-P2_MODEL_ID = "heack/HeackMT5-ZhSum100k"
+P2_MODEL_ID = "chiakya/T5-large-chinese-Summarization"
 
 LABEL_MAP = {
 	"LABEL_0": "Positive",
