@@ -1,7 +1,7 @@
 # ISOM5240 Deep Learning Group Project — News Sentiment + Briefing
 
 ## Objective (≤ 50 words)
-Build a Hong Kong–friendly finance news briefing tool: ingest Traditional Chinese news, classify sentiment (fine-tuned) as Positive/Negative, and summarize key news in brief to support investor relations and risk monitoring.
+
 
 ## Pipelines
 - Pipeline 1 (fine-tuned): text-classification sentiment model
