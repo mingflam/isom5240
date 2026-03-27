@@ -1,17 +1,10 @@
-# install part
-# requirements.txt (Streamlit Cloud)
-# streamlit
-# transformers<5.0.0
-# torch
-# sentencepiece
-# protobuf
-# opencc-python-reimplemented
-
 # import part
+import pandas as pd
+import numpy as np
 import streamlit as st
 from transformers import pipeline
 
-# Optional: convert Simplified -> Traditional (HK)
+# convert Simplified -> Traditional (HK)
 try:
 	from opencc import OpenCC
 	_cc = OpenCC("s2hk")  # use "s2t" for generic Traditional
@@ -19,25 +12,45 @@ except Exception:
 	_cc = None
 
 
+# =========================
+# Default models (no UI selection)
+# =========================
+P1_MODEL_ID = "mingflam/final_sentiment_model_v2"
+P2_MODEL_ID = "heack/HeackMT5-ZhSum100k"
+
+# Adjust mapping to your confirmed label meaning
+LABEL_MAP = {
+	"LABEL_0": "Positive",
+	"LABEL_1": "Negative",
+}
+
+
 # function part
+def get_device() -> int:
+	# Streamlit Cloud is usually CPU; keep this for local GPU
+	try:
+		import torch
+		return 0 if torch.cuda.is_available() else -1
+	except Exception:
+		return -1
+
+
 @st.cache_resource
-def get_sentiment_pipeline(model_name: str):
-	return pipeline(
+def load_pipelines():
+	device = get_device()
+	clf = pipeline(
 		"text-classification",
-		model=model_name,
-		tokenizer=model_name,
-		return_all_scores=False,
+		model=P1_MODEL_ID,
+		tokenizer=P1_MODEL_ID,
+		device=device,
 	)
-
-
-@st.cache_resource
-def get_summarization_pipeline(model_name: str):
-	return pipeline(
+	sum_pipe = pipeline(
 		"summarization",
-		model=model_name,
-		tokenizer=model_name,
-		framework="pt",
+		model=P2_MODEL_ID,
+		tokenizer=P2_MODEL_ID,
+		device=device,
 	)
+	return clf, sum_pipe
 
 
 def normalize_text(title: str, text: str) -> str:
@@ -47,35 +60,33 @@ def normalize_text(title: str, text: str) -> str:
 
 
 def map_sentiment_label(raw_label: str) -> str:
-	label_map = {
-		"LABEL_0": "Positive",
-		"LABEL_1": "Negative",
-	}
-	return label_map.get(raw_label, raw_label)
+	return LABEL_MAP.get(raw_label, raw_label)
 
 
-def sentimentClassifier(text: str, model_name: str):
-	clf = get_sentiment_pipeline(model_name)
-	pred = clf(text, truncation=True, max_length=512)[0]
-	return pred  # e.g., {"label": "LABEL_0", "score": 0.98}
+def run_p1_batch(clf, texts, batch_size=16, max_length=512):
+	outs = []
+	for i in range(0, len(texts), batch_size):
+		batch = texts[i : i + batch_size]
+		out = clf(batch, truncation=True, padding=True, max_length=max_length)
+		outs.extend(out)
+	return outs
 
 
-def summarizer(text: str, model_name: str) -> str:
-	sum_pipe = get_summarization_pipeline(model_name)
-	out = sum_pipe(
-		text,
-		max_length=120,
-		min_length=30,
-		truncation=True,
-	)[0]
-	summary_text = out.get("summary_text", "")
+def run_p2_single(sum_pipe, text: str, max_len=120, min_len=30) -> str:
+	text = (text or "").strip()
+	if not text:
+		return ""
+	text = text[:4000]
+	res = sum_pipe(text, max_length=max_len, min_length=min_len, truncation=True)
+	summary_text = res[0].get("summary_text", "")
+	# Convert Simplified -> Traditional (HK) if OpenCC is available
 	if _cc is not None:
 		summary_text = _cc.convert(summary_text)
 	return summary_text
 
 
 def output_msg(input_text: str, sentiment_label: str, summary_text: str):
-	st.subheader("Output")
+	st.markdown("### Output")
 	with st.expander("Input text (click to expand)", expanded=False):
 		st.write(input_text)
 	st.write("Sentiment:", sentiment_label)
@@ -83,17 +94,22 @@ def output_msg(input_text: str, sentiment_label: str, summary_text: str):
 	st.write(summary_text)
 
 
-def main():
-	st.set_page_config(
-		page_title="Chinese Finance News Briefing",
-		layout="wide",
-		initial_sidebar_state="collapsed",
-	)
+# main part
+st.set_page_config(
+	page_title="Chinese Finance News Briefing",
+	layout="wide",
+	initial_sidebar_state="collapsed",
+)
 
-	st.header("Title: News Sentiment + Summarization (Hugging Face Pipelines)")
-	st.caption("Note: First run may take time to download models on Streamlit Cloud.")
+st.title("Chinese Finance News: Sentiment + Summary")
+st.caption("Pipeline 1 = sentiment classifier. Pipeline 2 = summarization.")
 
-	st.subheader("Input")
+clf, sum_pipe = load_pipelines()
+
+tab1, tab2 = st.tabs(["Single input", "Batch CSV"])
+
+with tab1:
+	st.subheader("Single headline")
 	col1, col2 = st.columns(2)
 	with col1:
 		title = st.text_input("title", value="")
@@ -101,36 +117,58 @@ def main():
 		text = st.text_input("text", value="")
 	input_text = normalize_text(title, text)
 
-	st.subheader("Models")
-	sentiment_model = st.text_input(
-		"Sentiment model (fine-tuned):",
-		"mingflam/final_sentiment_model_v2",
-	)
-	summary_model = st.text_input(
-		"Summarization model:",
-		"heack/HeackMT5-ZhSum100k",
-	)
-
 	if st.button("Run", type="primary"):
-		if input_text.strip() == "":
+		if not input_text:
 			st.warning("Please enter title/text.")
-			return
+		else:
+			with st.spinner("Running sentiment..."):
+				out = run_p1_batch(clf, [input_text], batch_size=1)
+				p = out[0]
+				raw = p.get("label", "")
+				sentiment = map_sentiment_label(raw)
 
-		with st.spinner("Running sentiment..."):
-			sentiment_pred = sentimentClassifier(input_text, sentiment_model)
-			raw_label = sentiment_pred.get("label", "")
-			final_label = map_sentiment_label(raw_label)
+			with st.spinner("Running summarization (this can take a while on Streamlit Cloud CPU)..."):
+				summary = run_p2_single(sum_pipe, input_text)
+			output_msg(input_text, sentiment, summary)
 
-		# Show input + sentiment first
-		output_msg(input_text, final_label, "")
+with tab2:
+	st.subheader("Upload CSV → sentiment + summary + download")	
+	st.write("CSV must contain columns: title, text")
+	uploaded = st.file_uploader("Upload CSV", type=["csv"])
+	max_rows = int(st.number_input("Max rows (demo)", 10, 500, 100, 10))
 
-		with st.spinner("Running summarization (this can take a while on Streamlit Cloud CPU)..."):
-			summary_text = summarizer(input_text, summary_model)
+	if uploaded is not None:
+		df = pd.read_csv(uploaded)
+		missing = [c for c in ["title", "text"] if c not in df.columns]
+		if missing:
+			st.error(f"Missing columns: {missing}")
+		else:
+			df = df.head(max_rows).copy()
+			df["title"] = df["title"].fillna("").astype(str)
+			df["text"] = df["text"].fillna("").astype(str)
+			df["input_text"] = df.apply(lambda r: normalize_text(r["title"], r["text"]), axis=1)
 
-		# Re-render output with summary
-		output_msg(input_text, final_label, summary_text)
+			if st.button("Run batch", type="primary"):
+				with st.spinner("Running sentiment..."):
+					texts = df["input_text"].tolist()
+					preds = run_p1_batch(clf, texts, batch_size=16, max_length=512)
+					sentiments = [map_sentiment_label(p.get("label", "")) for p in preds]
 
+				with st.spinner("Running summarization (this can take a while on Streamlit Cloud CPU)..."):
+					summaries = [run_p2_single(sum_pipe, t) for t in df["input_text"].tolist()]
 
-# main part
-if __name__ == "__main__":
-	main()
+				out_df = pd.DataFrame({
+					"sentiment": sentiments,
+					"input_text": df["input_text"].tolist(),
+					"summary": summaries,
+				})
+
+				st.dataframe(out_df.head(20), use_container_width=True)
+
+				csv_bytes = out_df.to_csv(index=False).encode("utf-8")
+				st.download_button(
+					"Download results CSV",
+					data=csv_bytes,
+					file_name="sentiment_results.csv",
+					mime="text/csv",
+				)
