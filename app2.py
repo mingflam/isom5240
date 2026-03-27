@@ -1,10 +1,19 @@
+# install part
+# requirements.txt (Streamlit Cloud)
+# streamlit
+# transformers<5.0.0
+# torch
+# sentencepiece
+# protobuf
+# opencc-python-reimplemented
+
 # import part
 import pandas as pd
 import numpy as np
 import streamlit as st
 from transformers import pipeline
 
-# convert Simplified -> Traditional (HK)
+# Optional: convert Simplified -> Traditional (HK)
 try:
 	from opencc import OpenCC
 	_cc = OpenCC("s2hk")  # use "s2t" for generic Traditional
