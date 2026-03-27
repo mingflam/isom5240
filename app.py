@@ -100,9 +100,9 @@ with tab1:
 			summary = run_p2_single(sum_pipe, input_text)
 
 			st.markdown("### Output")
+			with st.expander("Input text (click to expand)", expanded=False):
+				st.write(input_text)
 			st.write("Sentiment:", sentiment)
-			st.write("Input text:")
-			st.write(input_text)
 			st.write("Summary (Pipeline 2):")
 			st.write(summary)
 
