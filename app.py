@@ -4,27 +4,37 @@ import streamlit as st
 
 
 # function part
-def sentimentClassifier(text, modelName):
-	# Load sentiment pipeline (Pipeline 1)
-	clf = pipeline(
+@st.cache_resource
+def get_sentiment_pipeline(modelName):
+	return pipeline(
 		"text-classification",
 		model=modelName,
 		tokenizer=modelName,
 		return_all_scores=False,
 	)
 
+
+@st.cache_resource
+def get_summarization_pipeline(modelName):
+	return pipeline(
+		"summarization",
+		model=modelName,
+		tokenizer=modelName,
+		framework="pt",
+	)
+
+
+def sentimentClassifier(text, modelName):
+	# Load sentiment pipeline (Pipeline 1)
+	clf = get_sentiment_pipeline(modelName)
+	# Always set max_length to avoid truncation warnings
 	pred = clf(text, truncation=True, max_length=512)[0]
 	return pred  # e.g., {"label": "LABEL_0", "score": 0.98}
 
 
 def summarizer(text, modelName):
 	# Load summarization pipeline (Pipeline 2)
-	sum_pipe = pipeline(
-		"summarization",
-		model=modelName,
-		tokenizer=modelName,
-		framework="pt",
-	)
+	sum_pipe = get_summarization_pipeline(modelName)
 
 	out = sum_pipe(
 		text,
@@ -61,6 +71,7 @@ def output_msg(sentiment_pred, summary_text):
 def main():
 	# Streamlit UI
 	st.header("Title: News Sentiment + Summarization (Hugging Face Pipelines)")
+	st.caption("Note: First run may take time to download models on Streamlit Cloud.")
 
 	st.subheader("Input")
 	user_text = st.text_area("Paste a news headline / short article:", height=150)
