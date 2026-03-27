@@ -24,7 +24,7 @@ except Exception:
 # =========================
 # Default models (no UI selection)
 # =========================
-P1_MODEL_ID = "mingflam/final_sentiment_model_v2"
+P1_MODEL_ID = "mingflam/final_sentiment_model_v3"
 P2_MODEL_ID = "heack/HeackMT5-ZhSum100k"
 
 # Adjust mapping to your confirmed label meaning
