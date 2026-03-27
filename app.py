@@ -8,8 +8,8 @@ st.set_page_config(page_title="Chinese Finance News Briefing", layout="wide")
 # =========================
 # EDIT THESE
 # =========================
-P1_MODEL_ID = "YOUR_HF_FINE_TUNED_MODEL_ID"  # e.g. "holmeslam/xxx"
-P2_MODEL_ID = "chiakya/T5-large-chinese-Summarization"  # change later if needed
+P1_MODEL_ID = "mingflam/final_sentiment_model_v2"  
+P2_MODEL_ID = "heack/HeackMT5-ZhSum100k" 
 
 # Adjust mapping to your confirmed label meaning
 LABEL_MAP = {
