@@ -3,7 +3,11 @@ import numpy as np
 import streamlit as st
 from transformers import pipeline
 
-st.set_page_config(page_title="Chinese Finance News Briefing", layout="wide")
+st.set_page_config(
+	page_title="Chinese Finance News Briefing",
+	layout="wide",
+	initial_sidebar_state="collapsed",
+)
 
 # =========================
 # EDIT THESE
@@ -60,41 +64,22 @@ def run_p1_batch(clf, texts, batch_size=16, max_length=512):
 	return outs
 
 
-def build_digest(input_texts, sentiments, confidences, max_rows=20) -> str:
-	"""Build a short digest for the summarization model."""
-	lines = []
-	for i, (txt, s, c) in enumerate(zip(input_texts, sentiments, confidences)):
-		if i >= max_rows:
-			break
-		lines.append(f"新聞: {txt}\n情緒: {s} (conf={c:.4f})\n")
-	return "\n".join(lines)
-
-
-def run_p2(sum_pipe, digest: str, max_len=120, min_len=30) -> str:
-	if not digest.strip():
+def run_p2_single(sum_pipe, text: str, max_len=120, min_len=30) -> str:
+	text = (text or "").strip()
+	if not text:
 		return ""
-	# Keep input bounded for MT5-style summarizers
-	digest = digest[:4000]
-	res = sum_pipe(digest, max_length=max_len, min_length=min_len, truncation=True)
+	text = text[:4000]
+	res = sum_pipe(text, max_length=max_len, min_length=min_len, truncation=True)
 	return res[0]["summary_text"]
 
 
 st.title("Chinese Finance News: Sentiment + Summary")
-st.caption("Pipeline 1 = fine-tuned sentiment classifier. Pipeline 2 = summarization.")
-
-# Match the style code: show model IDs in the sidebar
-with st.sidebar:
-	st.subheader("Models")
-	st.write("P1:", P1_MODEL_ID)
-	st.write("P2:", P2_MODEL_ID)
+st.caption("Pipeline 1 = sentiment classifier. Pipeline 2 = summarization.")
 
 clf, sum_pipe = load_pipelines()
 
 tab1, tab2 = st.tabs(["Single input", "Batch CSV"])
 
-# =========================
-# Single
-# =========================
 with tab1:
 	st.subheader("Single headline")
 	col1, col2 = st.columns(2)
@@ -102,33 +87,27 @@ with tab1:
 		title = st.text_input("title", value="")
 	with col2:
 		text = st.text_input("text", value="")
-
 	input_text = normalize_text(title, text)
 
-	if st.button("Run sentiment + summary", type="primary"):
+	if st.button("Run", type="primary"):
 		if not input_text:
 			st.warning("Please enter title/text.")
 		else:
-			# Pipeline 1: sentiment
 			out = run_p1_batch(clf, [input_text], batch_size=1)
 			p = out[0]
 			raw = p.get("label")
 			sentiment = LABEL_MAP.get(raw, raw)
-			confidence = float(p.get("score", np.nan))
+			summary = run_p2_single(sum_pipe, input_text)
 
-			# Pipeline 2: summary (for single input, summarize the input itself)
-			summary = run_p2(sum_pipe, input_text, max_len=120, min_len=30)
-
-			# Match the style code: highlight sentiment result
-			st.success(f"Sentiment: {sentiment} (confidence={confidence:.4f})")
-			st.markdown("### Summary (Pipeline 2)")
+			st.markdown("### Output")
+			st.write("Sentiment:", sentiment)
+			st.write("Input text:")
+			st.write(input_text)
+			st.write("Summary (Pipeline 2):")
 			st.write(summary)
 
-# =========================
-# Batch
-# =========================
 with tab2:
-	st.subheader("Upload CSV → sentiment + download + summary")
+	st.subheader("Upload CSV → sentiment + summary + download")
 	st.write("CSV must contain columns: title, text")
 	uploaded = st.file_uploader("Upload CSV", type=["csv"])
 	max_rows = int(st.number_input("Max rows (demo)", 10, 500, 100, 10))
@@ -142,43 +121,25 @@ with tab2:
 			df = df.head(max_rows).copy()
 			df["title"] = df["title"].fillna("").astype(str)
 			df["text"] = df["text"].fillna("").astype(str)
-			df["input_text"] = df.apply(
-				lambda r: normalize_text(r["title"], r["text"]), axis=1
-			)
+			df["input_text"] = df.apply(lambda r: normalize_text(r["title"], r["text"]), axis=1)
 
-			if st.button("Run batch sentiment + summary", type="primary"):
-				input_texts = df["input_text"].tolist()
+			if st.button("Run batch", type="primary"):
+				texts = df["input_text"].tolist()
+				preds = run_p1_batch(clf, texts, batch_size=16, max_length=512)
 
-				# Pipeline 1: sentiment for each row
-				preds = run_p1_batch(clf, input_texts, batch_size=16, max_length=512)
-				sentiments, confs = [], []
+				sentiments = []
 				for p in preds:
 					raw = p.get("label")
 					sentiments.append(LABEL_MAP.get(raw, raw))
-					confs.append(float(p.get("score", np.nan)))
 
-				# Pipeline 2: one overall brief summary for the batch
-				digest = build_digest(
-					input_texts,
-					sentiments,
-					confs,
-					max_rows=min(20, len(input_texts)),
-				)
-				batch_summary = run_p2(sum_pipe, digest, max_len=160, min_len=40)
+				out_df = pd.DataFrame({
+					"sentiment": sentiments,
+					"input_text": df["input_text"].tolist(),
+					"summary": [run_p2_single(sum_pipe, t) for t in df["input_text"].tolist()],
+				})
 
-				# Output table shown on the website: list all inputs with same info
-				out_df = pd.DataFrame(
-					{
-						"input_text": input_texts,
-						"summary": [batch_summary] * len(input_texts),
-						"sentiment": sentiments,
-						"confidence": confs,
-					}
-				)
+				st.dataframe(out_df.head(20), use_container_width=True)
 
-				st.dataframe(out_df, use_container_width=True)
-
-				# Download should include only: input_text, summary, sentiment, confidence
 				csv_bytes = out_df.to_csv(index=False).encode("utf-8")
 				st.download_button(
 					"Download results CSV",
@@ -186,6 +147,3 @@ with tab2:
 					file_name="sentiment_results.csv",
 					mime="text/csv",
 				)
-
-				st.markdown("### Brief summary (Pipeline 2)")
-				st.write(batch_summary)
