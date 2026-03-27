@@ -1,4 +1,7 @@
-transformers<5.0.0
-torch
 streamlit
-Pillow
+pandas
+numpy
+torch
+transformers<5.0.0
+sentencepiece
+protobuf
